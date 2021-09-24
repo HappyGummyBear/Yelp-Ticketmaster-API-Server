@@ -1,0 +1,60 @@
+title Kirk Lopez Project: Ticketmaster + Yelp API
+
+participant Ticketmaster API
+participant User
+participant Server
+participant Yelp Api
+
+note over Server: {tm_apikey, yelp_apikey} saved\nto JSON file
+User->(1)Server: Browser request for "/" (root of the site)
+Server->(1)User: Sends 200 OK, Return main.html
+User->(1)Server:Request for "/favicon"
+Server->(1)User: 200, OK, pipe image to browser
+User->(1)Server:Request for "/images/banner.jpg/"
+Server->(1)User:200, OK, pipe image to browser
+
+User->(1)Server: User fills out form (supplies data: artist, stateCode) \nBrowser request for "/search" page
+
+note over Server:Creates **artist, state**\n Saves {artist and state}
+
+note over Server: Create **webpage data**.\nStores information from\nboth api for webpage 
+
+alt This can be skipped if user checked this location and artist already
+
+Server->(1)User: API request to ticketmaster + {Apikey, keyword, location}
+
+User->(1)Ticketmaster API:GET "https://app.ticketmaster.com/discovery/v2/events.json"\nPass parameters {keyword, location (state)} header: {tm_apikey}\n**tm_apikey**: Apikey for ticket master to authorize access to api.\n**keyword**: User inputed artist,\n**location**:filter events by user state 
+
+Ticketmaster API->(1)User: If apikey is accepted: 200 Created + data (JSON in form of\n {chunks}) with information on artist events
+
+User->(1)Server:Browser recieves 201,\nbrowser forwards data {chunks} to server
+note over Server:Adds chunks to created **body**\nJSON.stringify body to\ncreate **all_events** and save each \nvenue to webpage_data.
+
+note over Server:Loop through **all_events**\nto create list of venues
+
+Server->(1)Yelp Api:**(# of venues * 3)** requests:\nGet "https://api.yelp.com/v3/businesses/search"\nPass parameters {term, location, limit} header:\n{yelp_apikey}\n**term**: filter data to just "restaurants"\n**location**: use all_event list to add venue as location\n**yelp_apikey**: authorize access to yelp api\n**limit**: max amount of restaurants returned
+
+
+Yelp Api->(1)Server:If apikey is accepted: 200 created + data (JSON\nin form of {chunks}) with information on restaurants\nnear the location passed
+
+note over Server:Adds chucks to created **body**\nJSON.stringify body to\ncreate **yelp_res_json**
+
+note over Server: Loop through **yelp_res_json** to \ncreate list of restaurants for \neach venue and list of **images_url**\nfor each restaurant. Save **rating, phone, \ndistance** to webpage_data
+
+alt Can be skipped if venue was used in another request and images exist already
+
+Server->(1)Yelp Api: Get request for **image_url**\n**image_url: **url for images of the restaurants saved on yelp
+
+Yelp Api->(1)Server:stream each images to the server
+
+note over Server:save images to **webpage_data**
+
+end
+end
+
+Server->(1)User:Format **webpage_data** for user.\n200, OK, Display Information to User
+
+User->(1)Server:3 Request for "/restaurant_imgs/"\nfrom every venue\n
+
+Server->(1)User:200, OK, streams images to browser
+
